@@ -28,3 +28,13 @@ plot(pressure)
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+beaver_telemetry <- datasets::beaver1 %>% 
+       ggplot(aes(x = time, y = temp)) +
+       geom_point(aes(colour = as_factor(activ))) +
+       ggtitle("Body temperature of beavers")
+
+beaver_telemetry
+```
+
