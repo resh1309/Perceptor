@@ -1,0 +1,111 @@
+---
+title: "Project_Course_Lab2B"
+author: "Reshma.Poeran"
+date: "22-2-2021"
+output: html_document
+---
+
+```{r results='hide'}
+library(tidyverse)
+library(lubridate)
+library(ggplot2)
+library(ggrepel)
+```
+
+```{r}
+citation(package = "tidyverse")
+citation(package = "lubridate")
+citation(package = "ggplot2")
+citation(package = "ggrepel")
+```
+
+#### Exercise 1
+
+1. Find a relevant dataset that you recently found or are busy with at the moment*
+2. Write a short Rmd report where you LOAD and VISUALIZE (create at least 3 different graphs) the data in an Rmd report.
+3. Go over this tutorial: RStudio Params in Rmd
+4. Define one parameter in your analysis
+5. Knit two different reports of your parameterized Rmd (with two different values for one paramter defined) and sent them to the teacher
+
+Assignment:  
+- I want to make an overview with the covid19 cases and deaths in the netherlands per month/year.  
+- I will search for a dataset on the internet, uploade the dataset in Rstudio.  
+- Analyse the data, what do I need to make an overview and calculate the results.  
+- Eventually visualize the figures with a plot.
+```{r}
+## Load the dataset from the internet
+## Source: https://www.ecdc.europa.eu
+data <- read.csv("https://opendata.ecdc.europa.eu/covid19/casedistribution/csv", na.strings = "", fileEncoding = "UTF-8-BOM", stringsAsFactors = F)
+
+```
+
+```{r warning=FALSE}
+## Have a look at the data, what data is in here.
+## What information can be used?
+view(data)
+
+## What is the structure of the data?
+summary(data)
+
+## How many fields are there and what are the names, is there maybe a field I need to add?
+names(data)
+
+##Sum of corona cases in total
+sum(data$cases)
+
+## Sum of death by corona
+sum(data$deaths)
+
+## Add field mnth_year, I will need that to show the result in a plot.
+data$mnth_year <- paste0(data$year,data$month)
+names(data)
+
+## Filter the data in country on the Netherlands
+## Look at the data, is this the information I am looking for?
+
+nl <-
+  data %>%
+  dplyr::filter(countriesAndTerritories == "Netherlands") 
+
+view(nl)
+
+## I need to prepare my dataset for the plot. 
+## I want to group the cases and deaths by month and year.
+## Select the fields that are necessary to show the result.
+
+mnth_nl<-
+  data %>%
+  dplyr::filter(countriesAndTerritories == "Netherlands") %>%
+  dplyr::select(c(month,year,cases,deaths,mnth_year)) %>%  
+  dplyr::group_by(month,year,mnth_year) %>%
+  summarise(sum_cases = sum(cases),
+            sum_deaths = sum(deaths)) %>% arrange(year,month)
+
+mnth_nl
+
+## Arrnage the mnth_year field in the correct order, otherwise mnth_year is not in a chronological order.
+
+mnth_nl <- mnth_nl %>%
+  mutate(mnth_year = factor(mnth_year,
+                            levels = c(201912,20201,20202,20203,20204,
+                                       20205,20206,20207,20208,20209,
+                                       202010,202011,202012),
+                            ordered = TRUE))
+
+## Dataset is ready to visualise.
+## I will make a point diagram, sum of the case per month/year.
+## And the size of the points and labels show the death count per month/year.
+
+plot_cov19_nl <-
+  mnth_nl %>%
+  ggplot(aes(x = mnth_year, y = sum_cases, colour = mnth_year)) + 
+  geom_point(aes(size = sum_deaths),alpha = 1.0) + 
+  geom_label_repel(aes(label=sum_deaths), size = 2.5, box.padding = .5) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.position = "bottom",
+        )
+
+plot_cov19_nl
+
+```
+
