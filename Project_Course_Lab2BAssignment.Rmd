@@ -10,6 +10,7 @@ library(tidyverse)
 library(lubridate)
 library(ggplot2)
 library(ggrepel)
+library(ggiraph)
 ```
 
 ```{r}
@@ -58,6 +59,7 @@ sum(data$deaths)
 
 ## Add field mnth_year, I will need that to show the result in a plot.
 data$mnth_year <- paste0(data$year,data$month)
+data$date_reported <- mdy(paste0(data$month,"-",data$day,"-",data$year))
 names(data)
 
 ## Filter the data in country on the Netherlands
@@ -65,7 +67,11 @@ names(data)
 
 nl <-
   data %>%
-  dplyr::filter(countriesAndTerritories == "Netherlands") 
+  dplyr::filter(countriesAndTerritories == "Netherlands") %>%
+  dplyr::select(c(month,year,cases,deaths,mnth_year)) %>%  
+  dplyr::group_by(month, year)%>%
+  summarise(sum_cases = sum(cases),
+            sum_deaths = sum(deaths)) %>% arrange(year,month)
 
 view(nl)
 
@@ -85,7 +91,7 @@ mnth_nl
 
 ## Arrnage the mnth_year field in the correct order, otherwise mnth_year is not in a chronological order.
 
-mnth_nl <- mnth_nl %>%
+mnth_nl_sort <- mnth_nl %>%
   mutate(mnth_year = factor(mnth_year,
                             levels = c(201912,20201,20202,20203,20204,
                                        20205,20206,20207,20208,20209,
@@ -97,7 +103,7 @@ mnth_nl <- mnth_nl %>%
 ## And the size of the points and labels show the death count per month/year.
 
 plot_cov19_nl <-
-  mnth_nl %>%
+  mnth_nl_sort %>%
   ggplot(aes(x = mnth_year, y = sum_cases, colour = mnth_year)) + 
   geom_point(aes(size = sum_deaths),alpha = 1.0) + 
   geom_label_repel(aes(label=sum_deaths), size = 2.5, box.padding = .5) +
@@ -106,6 +112,36 @@ plot_cov19_nl <-
         )
 
 plot_cov19_nl
+
+## Line plot with the months.
+## I don't get the x-asis correct.
+## Also not with the dataset of the plot.
+
+line_plot_cov19 <-
+  nl %>%
+  ggplot(aes(x = month, y = sum_cases)) +
+  geom_line(aes(), show.legend = FALSE, size = 1) +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.position = "bottom",
+        )
+
+line_plot_cov19
+
+## Bar chart based on the figures of mnth_year without variable for the plot
+
+mnth_nl_sort %>%
+  ggplot(aes(x = mnth_year, y = sum_cases)) +
+  geom_col(aes(fill = sum_deaths), position = "dodge") +
+  geom_point_interactive(aes(colour = sum_deaths), position = "jitter") 
+
+  
+## Line chart on all days to give a better insight of the development without variable for the plot.
+
+data %>%
+  dplyr::filter(countriesAndTerritories == "Netherlands") %>%
+  ggplot(aes(x = date_reported, y = cases)) +
+  geom_line(aes(colour = deaths), size = 1, alpha = 0.9)
+
 
 ```
 
